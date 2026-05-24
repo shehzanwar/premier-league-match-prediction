@@ -61,6 +61,12 @@ Statistical significance of performance differences is assessed using McNemar's 
 
 ```
 premier-league-match-prediction/
+├── images/                             # Plot outputs referenced in this README
+│   ├── pca_scree_plot.png
+│   ├── pca_match_data_proj_2d.png
+│   ├── isomap_nonlin_proj.png
+│   ├── lasso_feat_importance.png
+│   └── calibration_curves.png
 ├── PL_matches/                         # Raw Premier League season CSV files
 │   └── PL-YYYY-YYYY.csv               # One file per season (e.g., PL-2022-2023.csv)
 ├── PL_Pred.ipynb                       # Main analysis and modeling notebook
@@ -192,7 +198,7 @@ All `PL-*.csv` files in `PL_matches/` are loaded, filtered to required columns, 
 
 ### 3. Dimensionality Reduction and Visualization
 
-- **PCA scree plot** — Identifies the number of components needed to retain 95% of variance (`n_components_95`).
+- **PCA scree plot** — Identifies the number of components needed to retain 95% of variance (`n_components_95 = 9`).
 - **PCA 2D projection** — Plots all matches projected onto the first two principal components, colored by result class.
 - **ISOMAP 2D projection** — Applies non-linear manifold learning (`n_neighbors=20`) on a random 2,000-match subsample for structural comparison with the linear PCA projection.
 
@@ -201,7 +207,7 @@ All `PL-*.csv` files in `PL_matches/` are loaded, filtered to required columns, 
 Each model is trained and evaluated under two feature conditions:
 
 - **Raw** — All 12 engineered features, scaled with `StandardScaler` inside the pipeline.
-- **PCA** — Same features reduced to `n_components_95` principal components inside the pipeline.
+- **PCA** — Same features reduced to 9 principal components inside the pipeline.
 
 Validation uses `TimeSeriesSplit(n_splits=5)` to ensure no future match data is used during training at any fold. Scaling and PCA fitting occur inside each fold to prevent leakage.
 
@@ -252,47 +258,74 @@ All models share `random_state=6740`. Scaling is applied within every pipeline t
 
 ## Results
 
-Cross-Validation Results (5-Fold TimeSeriesSplit, 4,485 matches):
+### Dimensionality Reduction
 
-Model                  Feature Set          Accuracy    Macro F1    Log Loss
----------------------  -------------------  ----------  ----------  ----------
-Lasso Regression       Raw (12 features)    0.5406      0.3985      0.9782
-Lasso Regression       PCA (9 features)     0.5382      0.3961      0.9842
-Random Forest          Raw (12 features)    0.5349      0.3951      0.9917
-SVM                    Raw (12 features)    0.5339      0.3957      1.0022
-SVM                    PCA (9 features)     0.5309      0.3918      1.0062
-Random Forest          PCA (9 features)     0.5288      0.3934      0.9919
-XGBoost                Raw (12 features)    0.4921      0.4231      1.2858
-XGBoost                PCA (9 features)     0.4865      0.4149      1.2706
-Dummy Baseline         Raw (12 features)    0.4477      0.2061      19.9084
-Dummy Baseline         PCA (9 features)     0.4477      0.2061      19.9084
+PCA reduces the 12-feature space to 9 components while retaining 95% of variance, indicating moderate redundancy in the feature set. The 2D projections below show substantial class overlap across all three result categories — consistent with the inherent difficulty of this prediction task.
 
-![PCA scree plot](/images/pca_scree_plot.png)
+![PCA Scree Plot](images/pca_scree_plot.png)
 
-![PCA 2D projection](/images/pca_match_data_proj_2d.png)
+![PCA 2D Projection](images/pca_match_data_proj_2d.png)
 
-![ISOMAP 2D projection](/images/isomap_nonlin_proj.png)
+The ISOMAP projection preserves similar structure to PCA, with no clearly separable clusters emerging under non-linear reduction either. This suggests the challenge is not a matter of linear vs. non-linear decision boundaries, but rather that the available pre-match features carry limited discriminative signal — particularly for draws.
 
-![Lasso feature importance bar chart](/images/lasso_feat_importance.png)
+![ISOMAP 2D Projection](images/isomap_nonlin_proj.png)
 
-![Calibration Curves](/images/calibration_curves.png)
+### Cross-Validation Performance
 
-McNemar's Test Results (Final Time-Series Fold, continuity correction applied):
+5-fold `TimeSeriesSplit`, 4,485 matches total. Metrics are averaged across folds. Best result per metric is bolded.
 
-Comparison                        Chi-Squared    p-value    Significant    Conclusion
---------------------------------  -------------  ---------  -------------  --------------------------------------------------
-Lasso Raw vs. Baseline            41.4050        0.0000     Yes            Lasso Raw and Baseline differ significantly
-Lasso Raw vs. Lasso PCA           3.8431         0.0499     Yes (p=0.05)   Lasso Raw and Lasso PCA differ significantly
-Lasso Raw vs. Random Forest Raw   3.0638         0.0801     No             No statistically significant difference detected
-Lasso Raw vs. Betting Market      0.4808         0.4881     No             No statistically significant difference detected
+| Model | Feature Set | Accuracy | Macro F1 | Log Loss |
+|---|---|:---:|:---:|:---:|
+| **Lasso Regression** | **Raw (12 features)** | **0.5406** | 0.3985 | **0.9782** |
+| Lasso Regression | PCA (9 features) | 0.5382 | 0.3961 | 0.9842 |
+| Random Forest | Raw (12 features) | 0.5349 | 0.3951 | 0.9917 |
+| SVM | Raw (12 features) | 0.5339 | 0.3957 | 1.0022 |
+| SVM | PCA (9 features) | 0.5309 | 0.3918 | 1.0062 |
+| Random Forest | PCA (9 features) | 0.5288 | 0.3934 | 0.9919 |
+| XGBoost | Raw (12 features) | 0.4921 | **0.4231** | 1.2858 |
+| XGBoost | PCA (9 features) | 0.4865 | 0.4149 | 1.2706 |
+| Dummy Baseline | Raw (12 features) | 0.4477 | 0.2061 | 19.9084 |
+| Dummy Baseline | PCA (9 features) | 0.4477 | 0.2061 | 19.9084 |
 
-Contingency tables [both correct, A correct/B wrong, A wrong/B correct, both wrong]:
-  Lasso Raw vs. Baseline          [[271, 146], [54,  276]]
-  Lasso Raw vs. Lasso PCA         [[384,  33], [18,  312]]
-  Lasso Raw vs. Random Forest Raw [[387,  30], [17,  313]]
-  Lasso Raw vs. Betting Market    [[394,  23], [29,  301]]
+**Observations:**
 
-For the complete quantitative results, methodology discussion, and interpretation, refer to the project documentation included in the repository:
+- Lasso Regression on raw features is the best-performing model by both accuracy (54.1%) and log loss (0.978). The regularization induced by the L1 penalty appears well-suited to a feature space where many predictors carry overlapping signal.
+- PCA costs almost nothing: reducing from 12 to 9 features drops Lasso accuracy by only 0.24 percentage points, confirming the feature set has limited redundancy beyond what PCA discards.
+- XGBoost achieves the highest Macro F1 (0.423), suggesting it predicts draws more frequently than other models and distributes its errors more evenly across classes. However, its log loss (1.286) is substantially worse than Lasso (0.978), indicating that its predicted probabilities are poorly calibrated despite reasonable class-level accuracy.
+- All trained models beat the dummy baseline by 4–9 accuracy points, confirming the engineered features carry real predictive signal.
+- The top four models (Lasso Raw, Lasso PCA, RF Raw, SVM Raw) are clustered within roughly one percentage point of each other in accuracy, suggesting diminishing returns from model complexity once the feature ceiling is reached.
+
+### Feature Importance
+
+![Lasso Feature Importance](images/lasso_feat_importance.png)
+
+Lasso coefficient magnitudes reveal that Elo ratings are the dominant predictors of home win probability, with `HomeElo` carrying the largest positive coefficient and `AwayElo` the largest negative. Rolling form features (points, goals) contribute secondary signal, while rest days and shot accuracy are attenuated toward zero by the L1 penalty — indicating they add limited independent information once Elo and form are accounted for.
+
+### Probability Calibration
+
+![Calibration Curves](images/calibration_curves.png)
+
+Lasso is well-calibrated for home win probabilities across most of the confidence range, closely tracking the perfect calibration diagonal. XGBoost overestimates home win probability at the high end of confidence, consistent with its higher log loss. For applications where probability estimates matter — such as comparison against betting odds — Lasso is the preferred model.
+
+### McNemar's Test
+
+Results from the final time-series fold (continuity correction applied).
+
+| Comparison | Chi-Squared | p-value | Significant | Interpretation |
+|---|:---:|:---:|:---:|---|
+| Lasso Raw vs. Baseline | 41.41 | < 0.001 | Yes | Model learned substantial signal above majority-class guessing |
+| Lasso Raw vs. Lasso PCA | 3.84 | 0.0499 | Marginal | PCA version is statistically distinguishable, but the practical gap is negligible |
+| Lasso Raw vs. Random Forest Raw | 3.06 | 0.0801 | No | No statistically significant performance difference between the two |
+| Lasso Raw vs. Betting Market | 0.48 | 0.4881 | No | Model is statistically indistinguishable from Bet365 implied probabilities |
+
+**Observations:**
+
+- The strong rejection of the baseline comparison (p < 0.001) validates that the model captures genuine structure in the data rather than exploiting class imbalance.
+- The Lasso Raw vs. Lasso PCA result lands exactly at the p=0.05 boundary. Given the contingency table shows only a 15-prediction discrepancy (33 vs. 18 off-diagonal), this result is sensitive to fold composition and should not be interpreted as a meaningful practical difference.
+- Lasso Raw and Random Forest Raw are statistically equivalent (p=0.080), which aligns with the cross-validation results where they sit within one percentage point of each other. Neither model has a reliable edge over the other.
+- The most notable result is the final comparison: Lasso Raw is statistically indistinguishable from the Bet365 betting market (p=0.488). For a model using only 12 engineered features with no real-time squad data or tactical information, matching the predictive accuracy of a professional bookmaker represents a meaningful performance ceiling.
+
+For full methodology and extended discussion, refer to the project documentation:
 
 - `Project Documentation.pdf` — Final written report.
 - `ISYE6740_Project_Proposal.pdf` — Initial proposal and research questions.
@@ -329,7 +362,6 @@ pip install xgboost statsmodels
 ```bash
 jupyter nbconvert --to html PL_Pred.ipynb
 open PL_Pred.html   # macOS
-# or
 start PL_Pred.html  # Windows
 ```
 
@@ -339,7 +371,7 @@ Draws occur in roughly 25% of Premier League matches and are inherently harder t
 
 **`NameError: name 'n_components_95' is not defined`**
 
-The PCA scree plot cell references `n_components_95` before it is computed. Re-run the PCA fitting cell (the one that calls `np.argmax(cm_var >= 0.95) + 1`) before running the model training cell.
+The model training cell references `n_components_95` before it is computed. Re-run the PCA fitting cell (the one containing `np.argmax(cm_var >= 0.95) + 1`) before running the model training cell.
 
 ---
 
