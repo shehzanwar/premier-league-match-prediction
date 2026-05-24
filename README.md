@@ -252,17 +252,45 @@ All models share `random_state=6740`. Scaling is applied within every pipeline t
 
 ## Results
 
-[Add screenshot here: cross-validation results table]
+Cross-Validation Results (5-Fold TimeSeriesSplit, 4,485 matches):
 
-[Add screenshot here: PCA scree plot and 2D projection]
+Model                  Feature Set          Accuracy    Macro F1    Log Loss
+---------------------  -------------------  ----------  ----------  ----------
+Lasso Regression       Raw (12 features)    0.5406      0.3985      0.9782
+Lasso Regression       PCA (9 features)     0.5382      0.3961      0.9842
+Random Forest          Raw (12 features)    0.5349      0.3951      0.9917
+SVM                    Raw (12 features)    0.5339      0.3957      1.0022
+SVM                    PCA (9 features)     0.5309      0.3918      1.0062
+Random Forest          PCA (9 features)     0.5288      0.3934      0.9919
+XGBoost                Raw (12 features)    0.4921      0.4231      1.2858
+XGBoost                PCA (9 features)     0.4865      0.4149      1.2706
+Dummy Baseline         Raw (12 features)    0.4477      0.2061      19.9084
+Dummy Baseline         PCA (9 features)     0.4477      0.2061      19.9084
 
-[Add screenshot here: ISOMAP 2D projection]
+![PCA scree plot](/images/pca_scree_plot.png)
 
-[Add screenshot here: Lasso feature importance bar chart]
+![PCA 2D projection](/images/pca_match_data_proj_2d.png)
 
-[Add screenshot here: probability calibration curves]
+![ISOMAP 2D projection](/images/isomap_nonlin_proj.png)
 
-[Add screenshot here: McNemar's test output]
+![Lasso feature importance bar chart](/images/lasso_feat_importance.png)
+
+![Calibration Curves](/images/calibration_curves.png)
+
+McNemar's Test Results (Final Time-Series Fold, continuity correction applied):
+
+Comparison                        Chi-Squared    p-value    Significant    Conclusion
+--------------------------------  -------------  ---------  -------------  --------------------------------------------------
+Lasso Raw vs. Baseline            41.4050        0.0000     Yes            Lasso Raw and Baseline differ significantly
+Lasso Raw vs. Lasso PCA           3.8431         0.0499     Yes (p=0.05)   Lasso Raw and Lasso PCA differ significantly
+Lasso Raw vs. Random Forest Raw   3.0638         0.0801     No             No statistically significant difference detected
+Lasso Raw vs. Betting Market      0.4808         0.4881     No             No statistically significant difference detected
+
+Contingency tables [both correct, A correct/B wrong, A wrong/B correct, both wrong]:
+  Lasso Raw vs. Baseline          [[271, 146], [54,  276]]
+  Lasso Raw vs. Lasso PCA         [[384,  33], [18,  312]]
+  Lasso Raw vs. Random Forest Raw [[387,  30], [17,  313]]
+  Lasso Raw vs. Betting Market    [[394,  23], [29,  301]]
 
 For the complete quantitative results, methodology discussion, and interpretation, refer to the project documentation included in the repository:
 
