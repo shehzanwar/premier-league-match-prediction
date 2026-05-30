@@ -9,7 +9,7 @@
 
 A machine learning project that predicts English Premier League match outcomes using Elo ratings, rolling form metrics, and shot accuracy — evaluated against a Bet365 betting market benchmark using time-series cross-validation and McNemar's statistical tests.
 
-> Developed as a final group project (Team 223) for Georgia Tech ISYE 6740: Computational Data Analysis.
+> Developed as a final project for Georgia Tech ISYE 6740: Computational Data Analysis.
 
 ---
 
